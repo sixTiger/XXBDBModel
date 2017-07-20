@@ -11,6 +11,9 @@
 
 @class FMDatabaseQueue;
 
+#define XXBDBHelpJudjeQueueSame [[XXBDBHelper shareDBHelper] judjeCurrentQueueSame];
+#define XXBDBHelpJudjeQueueDifferent [[XXBDBHelper shareDBHelper] judjeCurrentQueueSame];
+
 typedef void(^DBHelperComplate)(BOOL complate);
 
 @interface XXBDBHelper : NSObject
@@ -31,4 +34,6 @@ typedef void(^DBHelperComplate)(BOOL complate);
 
 - (dispatch_queue_t)getBDBHelperQueue;
 - (const void * const)getDispatchQueueKey;
+- (void)judjeCurrentQueueSame;
+- (void)judjeCurrentQueueDifferent;
 @end

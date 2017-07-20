@@ -8,6 +8,7 @@
 
 #import "ViewController.h"
 #import "XXBDBHelper.h"
+#import "XXBUserModel.h"
 
 @interface ViewController ()
 
@@ -26,6 +27,12 @@
         }
     }];
     NSLog(@"XXB Test");
+    
+    XXBUserModel *userModel = [[XXBUserModel alloc] init];
+    userModel.name = @"Test Name 1";
+    [userModel saveOrUpdate];
+    NSArray *array = [XXBUserModel findAll];
+    NSLog(@"XXB %@",array);
 }
 
 

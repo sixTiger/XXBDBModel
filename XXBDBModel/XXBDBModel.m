@@ -21,6 +21,17 @@
     return nil;
 }
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        NSDictionary *dic = [self.class getAllProperties];
+        _columeNames = [[NSMutableArray alloc] initWithArray:[dic objectForKey:@"name"]];
+        _columeTypes = [[NSMutableArray alloc] initWithArray:[dic objectForKey:@"type"]];
+    }
+    
+    return self;
+}
+
 #pragma mark - base method
 /**
  *  获取该类的所有属性
@@ -118,6 +129,7 @@
  * 如果已经创建，返回YES
  */
 + (BOOL)createTable {
+    XXBDBHelpJudjeQueueSame
     __block BOOL res = YES;
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inTransaction:^(FMDatabase *db, BOOL *rollback) {
         NSString *tableName = NSStringFromClass(self.class);

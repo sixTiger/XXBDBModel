@@ -76,7 +76,7 @@ static id _instance = nil;
 }
 
 - (FMDatabaseQueue *)getDatabaseQueueWithClass:(Class)modelClass {
-    if ([modelClass resolveClassMethod:@selector(getDBPathName)]) {
+    if ([modelClass respondsToSelector:@selector(getDBPathName)]) {
         return [self addIfNotHaveDBQueueWithName:[modelClass getDBPathName]];
     } else {
         return nil;
@@ -92,7 +92,7 @@ static id _instance = nil;
         complate(NO);
         return;
     }
-    dispatch_async([self getBDBHelperQueue], ^{
+    dispatch_sync([self getBDBHelperQueue], ^{
         if (self.defaultDBPath != nil) {
 #warning 需要移除  FMDBQueue
         }
@@ -109,10 +109,10 @@ static id _instance = nil;
             for (int i = 0; i < numClasses; i++) {
                 if ( class_getSuperclass(classes[i]) == [XXBDBModel class] ) {
                     id class = classes[i];
-                    if ([class getDBPathName] == nil) {
-                        //单独创建数据库的都不处理
-                    } else {
+                    if ([class getDBPathName] == nil || [class getDBPathName].length == 0) {
                         [class performSelector:@selector(createTable) withObject:nil];
+                    } else {
+                        //单独创建数据库的都不处理
                     }
                 }
             }
@@ -171,5 +171,23 @@ static id _instance = nil;
 
 - (const void * const)getDispatchQueueKey {
     return kXXBDBHelpeDispatchQueueSpecificKey;
+}
+
+- (void)judjeCurrentQueueSame {
+//#ifndef NDEBUG
+    /* Get the currently executing queue (which should probably be nil, but in theory could be another DB queue
+     * and then check it against self to make sure we're not about to deadlock. */
+    XXBDBHelper *currentSyncQueue = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
+    assert(currentSyncQueue == self && "数据存取不在同一个队列里边 肯呢个会引起数据混乱，崩溃");
+//#endif
+}
+
+- (void)judjeCurrentQueueDifferent {
+    //#ifndef NDEBUG
+    /* Get the currently executing queue (which should probably be nil, but in theory could be another DB queue
+     * and then check it against self to make sure we're not about to deadlock. */
+    XXBDBHelper *currentSyncQueue = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
+    assert(currentSyncQueue != self && "数据存取在同一个队列里边，可能会造成线程的死锁");
+    //#endif
 }
 @end
