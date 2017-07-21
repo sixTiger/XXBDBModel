@@ -69,7 +69,8 @@ typedef void(^XXBDBComplate)(BOOL complate);
 /*
  * 批量保存数据
  */
-+ (BOOL)saveObjects:(NSArray *)array;
++ (BOOL)saveObjectsSync:(NSArray *)array;
++ (void)saveObjectsAsync:(NSArray *)array;
 
 
 /** 保存或更新

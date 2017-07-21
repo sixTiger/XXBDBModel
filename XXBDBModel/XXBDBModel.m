@@ -230,8 +230,21 @@
     return res;
 }
 
++ (BOOL)saveObjectsSync:(NSArray *)array {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self saveObjectsSync:array];
+    });
+    return res;
+}
++ (void)saveObjectsAsync:(NSArray *)array {
+    
+}
+
 /** 批量保存用户对象 */
 + (BOOL)saveObjects:(NSArray *)array {
+    XXBDBHelpJudjeQueueSame;
     //判断是否是JKBaseModel的子类
     for (XXBDBModel *model in array) {
         if (![model isKindOfClass:[XXBDBModel class]]) {
