@@ -92,7 +92,7 @@ static id _instance = nil;
         complate(NO);
         return;
     }
-    dispatch_sync(XXBDBHelperQueue, ^{
+    dispatch_async(XXBDBHelperQueue, ^{
         if (self.defaultDBPath != nil) {
 #warning 需要移除  FMDBQueue
         }

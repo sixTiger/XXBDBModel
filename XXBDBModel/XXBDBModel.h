@@ -70,84 +70,97 @@ typedef void(^XXBDBComplate)(BOOL complate);
  * 批量保存数据
  */
 + (BOOL)saveObjectsSync:(NSArray *)array;
-+ (void)saveObjectsAsync:(NSArray *)array;
++ (void)saveObjectsAsync:(NSArray *)array complate:(XXBDBComplate)complate;
 
 
 /** 保存或更新
  * 如果不存在主键，保存，
  * 有主键，则更新
  */
-- (BOOL)saveOrUpdate;
 
 - (BOOL)saveOrUpdateSync;
-- (BOOL)saveOrUpdateAsync:(XXBDBComplate)complate;
+- (void)saveOrUpdateAsync:(XXBDBComplate)complate;
 
 /** 保存或更新
  * 如果根据特定的列数据可以获取记录，则更新，
  * 没有记录，则保存
  */
-- (BOOL)saveOrUpdateByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue;
-
-
+- (BOOL)saveOrUpdateSyncByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue;
+- (void)saveOrUpdateAsyncByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue complate:(XXBDBComplate)complate;
 
 /*
  * 更新单个数据
  */
-- (BOOL)update;
+- (BOOL)updateSync;
+- (void)updateAsync:(XXBDBComplate)complate;
 
 /*
  * 批量更新数据
  */
-+ (BOOL)updateObjects:(NSArray *)array;
++ (BOOL)updateSyncObjects:(NSArray *)array;
++ (void)updateAsyncObjects:(NSArray *)array complate:(XXBDBComplate)complate;
 
 /*
  * 删除单个数据 
  */
-- (BOOL)deleteObject;
+- (BOOL)deleteObjectSync;
+- (void)deleteObjectAsync:(XXBDBComplate)complate;
+
 
 /*
  * 批量删除数据 
  */
-+ (BOOL)deleteObjects:(NSArray *)array;
++ (BOOL)deleteSyncObjects:(NSArray *)array;
++ (void)deleteAsyncObjects:(NSArray *)array complate:(XXBDBComplate)complate;
 
 /*
  * 通过条件删除数据 
  */
-+ (BOOL)deleteObjectsByCriteria:(NSString *)criteria;
++ (BOOL)deleteSyncObjectsByCriteria:(NSString *)criteria;
++ (void)deleteAsyncObjectsByCriteria:(NSString *)criteria complate:(XXBDBComplate)complate;
 
 /*
  * 通过条件删除 (多参数）--2 
  */
-+ (BOOL)deleteObjectsWithFormat:(NSString *)format, ...;
++ (BOOL)deleteSyncObjectsWithFormat:(NSString *)format, ...;
++ (void)deleteAsyncObjectsComplate:(XXBDBComplate)complate WithFormat:(NSString *)format, ...;
 
 /*
  * 清空表 
  */
-+ (BOOL)clearTable;
++ (BOOL)clearTableSync;
++ (void)clearTableAsync:(XXBDBComplate)complate;
 
 /*
  * 查询全部数据 
  */
-+ (NSArray *)findAll;
+
++ (NSArray *)findAllSync;
++ (void)findAllAsync:(void(^)(NSArray *answerArray))complate;
 
 /*
  * 通过主键查询 
  */
-+ (instancetype)findByPK:(int)inPk;
++ (instancetype)findSyncByPK:(int)inPk;
++ (void)findAsyncByPK:(int)inPk complate:(void(^)(id answer))complate;
 
-+ (instancetype)findFirstWithFormat:(NSString *)format, ...;
++ (instancetype)findSyncFirstWithFormat:(NSString *)format, ...;
++ (void)findAsyncFirstComplate:(void(^)(id answer))complate WithFormat:(NSString *)format, ...;
 
 /*
  * 查找某条数据
  */
-+ (instancetype)findFirstByCriteria:(NSString *)criteria;
++ (instancetype)findSyncFirstByCriteria:(NSString *)criteria;
++ (void)findAsyncFirstByCriteria:(NSString *)criteria complate:(void(^)(id answer))complate;
 
-+ (NSArray *)findWithFormat:(NSString *)format, ...;
++ (NSArray *)findSyncWithFormat:(NSString *)format, ...;
++ (void)findAsyncComplate:(void(^)(NSArray *answerArray))complate WithFormat:(NSString *)format, ...;
 
 /** 通过条件查找数据
  * 这样可以进行分页查询 @" WHERE pk > 5 limit 10"
  */
-+ (NSArray *)findByCriteria:(NSString *)criteria;
++ (NSArray *)findSyncByCriteria:(NSString *)criteria;
++ (void)findAsyncByCriteria:(NSString *)criteria complate:(void(^)(NSArray *answerArray))complate;
 
 /**
  * 创建表

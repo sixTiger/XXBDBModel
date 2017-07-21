@@ -113,16 +113,15 @@
 
 /** 获取列名 */
 + (NSArray *)getColumns {
-    NSMutableArray *columns = [NSMutableArray array];
-    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
-        NSString *tableName = NSStringFromClass(self.class);
-        FMResultSet *resultSet = [db getTableSchema:tableName];
-        while ([resultSet next]) {
-            NSString *column = [resultSet stringForColumn:@"name"];
-            [columns addObject:column];
-        }
-    }];
-    return [columns copy];
+    __block NSArray *columns = nil;
+    if (XXBDBHelperIsInHelperQueue) {
+        columns = [self p_getColumns];
+    } else {
+        dispatch_sync(XXBDBHelperQueue, ^{
+            columns = [self p_getColumns];
+        });
+    }
+    return columns;
 }
 
 /**
@@ -130,6 +129,520 @@
  * 如果已经创建，返回YES
  */
 + (BOOL)createTable {
+    
+    __block BOOL res = YES;
+    if (XXBDBHelperIsInHelperQueue) {
+        res = [self p_clearTable];
+    } else {
+        dispatch_sync(XXBDBHelperQueue, ^{
+            res = [self p_clearTable];
+        });
+    }
+    return res;
+}
+
+#pragma mark - save
+
+- (BOOL)saveSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        XXBDBLogInfo;
+        res = [self p_save];
+    });
+    return res;
+}
+
+- (void)saveAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            XXBDBLogInfo;
+            BOOL res = [self p_save];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            complate([self p_save]);
+        });
+    }
+}
+
++ (BOOL)saveObjectsSync:(NSArray *)array {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_saveObjects:array];
+    });
+    return res;
+}
+
++ (void)saveObjectsAsync:(NSArray *)array complate:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            XXBDBLogInfo;
+            BOOL res = [self p_saveObjects:array];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            BOOL res = [self p_saveObjects:array];
+            complate(res);
+        });
+    }
+}
+
+- (BOOL)saveOrUpdateSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_saveOrUpdate];
+    });
+    return res;
+}
+
+- (void)saveOrUpdateAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_sync(XXBDBHelperQueue, ^{
+            BOOL res = [self p_saveOrUpdate];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        BOOL res = [self p_saveOrUpdate];
+        complate(res);
+    }
+}
+
+- (BOOL)saveOrUpdateSyncByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_saveOrUpdateByColumnName:columnName AndColumnValue:columnValue];
+    });
+    return res;
+}
+
+- (void)saveOrUpdateAsyncByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue complate:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_saveOrUpdateByColumnName:columnName AndColumnValue:columnValue];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_saveOrUpdateByColumnName:columnName AndColumnValue:columnValue];
+            complate(res);
+        });
+    }
+}
+
+
+#pragma mark - update
+
+- (BOOL)updateSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_update];
+    });
+    return res;
+}
+- (void)updateAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_update];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_update];
+            complate(res);
+        });
+    }
+}
+
+
+/*
+ * 批量更新数据
+ */
++ (BOOL)updateSyncObjects:(NSArray *)array {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_updateObjects:array];
+    });
+    return res;
+}
+
++ (void)updateAsyncObjects:(NSArray *)array complate:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_updateObjects:array];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_updateObjects:array];
+            complate(res);
+        });
+    }
+}
+
+- (BOOL)deleteObjectSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_deleteObject];
+    });
+    return res;
+}
+
+- (void)deleteObjectAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObject];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObject];
+            complate(res);
+        });
+    }
+}
+
++ (BOOL)deleteSyncObjects:(NSArray *)array {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_deleteObjects:array];
+    });
+    return res;
+}
++ (void)deleteAsyncObjects:(NSArray *)array complate:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjects:array];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjects:array];
+            complate(res);
+        });
+    }
+}
+
++ (BOOL)deleteSyncObjectsByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_deleteObjectsByCriteria:criteria];
+    });
+    return res;
+}
+
++ (void)deleteAsyncObjectsByCriteria:(NSString *)criteria complate:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjectsByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjectsByCriteria:criteria];
+            complate(res);
+        });
+    }
+}
+
++ (BOOL)deleteSyncObjectsWithFormat:(NSString *)format, ... {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_deleteObjectsByCriteria:criteria];
+    });
+    return res;
+}
+
++ (void)deleteAsyncObjectsComplate:(XXBDBComplate)complate WithFormat:(NSString *)format, ... {
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjectsByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_deleteObjectsByCriteria:criteria];
+            complate(res);
+        });
+    }
+}
+
++ (BOOL)clearTableSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_clearTable];
+    });
+    return res;
+}
++ (void)clearTableAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_clearTable];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+        
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            BOOL res = [self p_clearTable];
+            complate(res);
+        });
+    }
+}
+
+
+#pragma mark - 查找
++ (NSArray *)findAllSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block NSArray *modelArray;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        modelArray = [self p_findAll];
+    });
+    return modelArray;
+}
+
++ (void)findAllAsync:(void(^)(NSArray *answerArray))complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            __block NSArray *modelArray;
+            modelArray = [self p_findAll];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(modelArray);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            __block NSArray *modelArray;
+            modelArray = [self p_findAll];
+            complate(modelArray);
+        });
+    }
+}
+
++ (instancetype)findFirstWithFormat:(NSString *)format, ... {
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    
+    return [self p_findFirstByCriteria:criteria];
+}
+
++ (instancetype)findSyncByPK:(int)inPk {
+    XXBDBHelpJudjeQueueDifferent;
+    __block id res;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_findByPK:inPk];
+    });
+    return res;
+}
++ (void)findAsyncByPK:(int)inPk complate:(void (^)(id))complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findByPK:inPk];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findByPK:inPk];
+            complate(res);
+        });
+    }
+}
+
++ (instancetype)findSyncFirstWithFormat:(NSString *)format, ... {
+    XXBDBHelpJudjeQueueDifferent;
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    __block id res = nil;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_findByCriteria:criteria];
+    });
+    return res;
+}
+
++ (void)findAsyncFirstComplate:(void(^)(id answer))complate WithFormat:(NSString *)format, ... {
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findByCriteria:criteria];
+            complate(res);
+        });
+    }
+}
+
++ (instancetype)findSyncFirstByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueDifferent;
+    __block id res;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        res = [self p_findFirstByCriteria:criteria];
+    });
+    return res;
+}
+
++ (void)findAsyncFirstByCriteria:(NSString *)criteria complate:(void(^)(id answer))complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findFirstByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            id res = [self p_findFirstByCriteria:criteria];
+            complate(res);
+        });
+    }
+    
+}
+
++ (NSArray *)findSyncWithFormat:(NSString *)format, ... {
+    XXBDBHelpJudjeQueueDifferent;
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    __block NSArray *array;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        array = [self p_findByCriteria:criteria];
+    });
+    return array;
+    
+}
+
++ (void )findAsyncComplate:(void(^)(NSArray *answerArray))complate WithFormat:(NSString *)format, ... {
+    va_list ap;
+    va_start(ap, format);
+    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
+    va_end(ap);
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            NSArray *resArray = [self p_findByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(resArray);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            NSArray *resArray = [self p_findByCriteria:criteria];
+            complate(resArray);
+        });
+    }
+}
+
++ (NSArray *)findSyncByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueDifferent;
+    __block NSArray *resArray;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        resArray = [self p_findFirstByCriteria:criteria];
+    });
+    return resArray;
+    
+}
++ (void)findAsyncByCriteria:(NSString *)criteria complate:(void(^)(NSArray *answerArray))complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async(XXBDBHelperQueue, ^{
+            NSArray *resArray = [self p_findByCriteria:criteria];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(resArray);
+            });
+        });
+    } else {
+        dispatch_async(XXBDBHelperQueue, ^{
+            NSArray *resArray = [self p_findByCriteria:criteria];
+            complate(resArray);
+        });
+    }
+}
+
+#pragma mark - util method
++ (NSString *)getColumeAndTypeString {
+    NSMutableString* pars = [NSMutableString string];
+    NSDictionary *dict = [self.class getAllProperties];
+    
+    NSMutableArray *proNames = [dict objectForKey:@"name"];
+    NSMutableArray *proTypes = [dict objectForKey:@"type"];
+    
+    for (int i=0; i< proNames.count; i++) {
+        [pars appendFormat:@"%@ %@",[proNames objectAtIndex:i],[proTypes objectAtIndex:i]];
+        if(i+1 != proNames.count) {
+            [pars appendString:@","];
+        }
+    }
+    return pars;
+}
+
+#pragma mark - must be override method
+/** 如果子类中有一些property不需要创建数据库字段，那么这个方法必须在子类中重写
+ */
++ (NSArray *)transients {
+    return [NSArray array];
+}
+
+#pragma mark - private function
+
++ (BOOL)p_createTable {
     XXBDBHelpJudjeQueueSame;
     __block BOOL res = YES;
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inTransaction:^(FMDatabase *db, BOOL *rollback) {
@@ -169,35 +682,22 @@
     return res;
 }
 
-#pragma mark - save
-
-- (BOOL)saveSync {
-    XXBDBHelpJudjeQueueDifferent;
-    __block BOOL res = NO;
-    dispatch_sync(XXBDBHelperQueue, ^{
-        XXBDBLogInfo;
-        res = [self save];
-    });
-    return res;
++ (NSArray *)p_getColumns {
+    XXBDBHelpJudjeQueueSame;
+    __block NSMutableArray *columns = [NSMutableArray array];
+    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
+        NSString *tableName = NSStringFromClass(self.class);
+        FMResultSet *resultSet = [db getTableSchema:tableName];
+        while ([resultSet next]) {
+            NSString *column = [resultSet stringForColumn:@"name"];
+            [columns addObject:column];
+        }
+    }];
+    return [columns copy];
 }
 
-- (void)saveAsync:(XXBDBComplate)complate {
-    if (XXBDBHelperIsInMainThread) {
-        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
-            XXBDBLogInfo;
-            BOOL res = [self save];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                complate(res);
-            });
-        });
-    } else {
-        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
-            complate([self save]);
-        });
-    }
-}
 
-- (BOOL)save {
+- (BOOL)p_save {
     XXBDBHelpJudjeQueueSame;
     NSString *tableName = NSStringFromClass(self.class);
     NSMutableString *keyString = [NSMutableString string];
@@ -230,29 +730,20 @@
     return res;
 }
 
-+ (BOOL)saveObjectsSync:(NSArray *)array {
-    XXBDBHelpJudjeQueueDifferent;
-    __block BOOL res = NO;
-    dispatch_sync(XXBDBHelperQueue, ^{
-        res = [self saveObjectsSync:array];
-    });
-    return res;
-}
-+ (void)saveObjectsAsync:(NSArray *)array {
-    
-}
-
-/** 批量保存用户对象 */
-+ (BOOL)saveObjects:(NSArray *)array {
+/*
+ * 批量保存对象
+ */
++ (BOOL)p_saveObjects:(NSArray *)array {
     XXBDBHelpJudjeQueueSame;
     //判断是否是JKBaseModel的子类
     for (XXBDBModel *model in array) {
         if (![model isKindOfClass:[XXBDBModel class]]) {
+            XXBDBLog(XXBDBLogLevelError, @"数据不合法");
             return NO;
         }
     }
-    
     __block BOOL res = YES;
+    
     // 如果要支持事务
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inTransaction:^(FMDatabase *db, BOOL *rollback) {
         for (XXBDBModel *model in array) {
@@ -290,10 +781,70 @@
     return res;
 }
 
-#pragma mark - update
+- (BOOL)p_saveOrUpdate {
+    id primaryValue = [self valueForKey:primaryId];
+    if ([primaryValue intValue] <= 0) {
+        return [self p_save];
+    }
+    return [self p_update];
+}
+
+- (BOOL)p_saveOrUpdateByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue {
+    XXBDBHelpJudjeQueueSame;
+    id record = [[self class] p_findFirstByCriteria:[NSString stringWithFormat:@"where %@ = %@",columnName,columnValue]];
+    if (record) {
+        id primaryValue = [record valueForKey:primaryId]; //取到了主键PK
+        if ([primaryValue intValue] <= 0) {
+            return [self p_save];
+        } else {
+            self.pk = [primaryValue integerValue];
+            return [self p_update];
+        }
+    }else{
+        return [self p_save];
+    }
+}
+
+/*
+ * 更新单个对象
+ */
+- (BOOL)p_update {
+    XXBDBHelpJudjeQueueSame;
+    __block BOOL res = NO;
+    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
+        NSString *tableName = NSStringFromClass(self.class);
+        id primaryValue = [self valueForKey:primaryId];
+        if (!primaryValue || primaryValue <= 0) {
+            return ;
+        }
+        NSMutableString *keyString = [NSMutableString string];
+        NSMutableArray *updateValues = [NSMutableArray  array];
+        for (int i = 0; i < self.columeNames.count; i++) {
+            NSString *proname = [self.columeNames objectAtIndex:i];
+            if ([proname isEqualToString:primaryId]) {
+                continue;
+            }
+            [keyString appendFormat:@" %@=?,", proname];
+            id value = [self valueForKey:proname];
+            if (!value) {
+                value = @"";
+            }
+            [updateValues addObject:value];
+        }
+        
+        //删除最后那个逗号
+        [keyString deleteCharactersInRange:NSMakeRange(keyString.length - 1, 1)];
+        NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE %@ = ?;", tableName, keyString, primaryId];
+        [updateValues addObject:primaryValue];
+        res = [db executeUpdate:sql withArgumentsInArray:updateValues];
+        XXBDBLogInfoFmort(@"%@",res?@"更新成功":@"更新失败");
+    }];
+    return res;
+}
 
 /** 批量更新用户对象*/
-+ (BOOL)updateObjects:(NSArray *)array {
++ (BOOL)p_updateObjects:(NSArray *)array {
+    XXBDBHelpJudjeQueueSame;
     for (XXBDBModel *model in array) {
         if (![model isKindOfClass:[XXBDBModel class]]) {
             return NO;
@@ -343,9 +894,26 @@
     return res;
 }
 
+/** 删除单个对象 */
+- (BOOL)p_deleteObject {
+    XXBDBHelpJudjeQueueSame;
+    __block BOOL res = NO;
+    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
+        NSString *tableName = NSStringFromClass(self.class);
+        id primaryValue = [self valueForKey:primaryId];
+        if (!primaryValue || primaryValue <= 0) {
+            return ;
+        }
+        NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = ?",tableName,primaryId];
+        res = [db executeUpdate:sql withArgumentsInArray:@[primaryValue]];
+        XXBDBLogInfoFmort(@"%@",res?@"删除成功":@"删除失败");
+    }];
+    return res;
+}
+
 /** 批量删除用户对象 */
-+ (BOOL)deleteObjects:(NSArray *)array
-{
++ (BOOL)p_deleteObjects:(NSArray *)array {
+    XXBDBHelpJudjeQueueSame;
     for (XXBDBModel *model in array) {
         if (![model isKindOfClass:[XXBDBModel class]]) {
             return NO;
@@ -364,7 +932,7 @@
             
             NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = ?",tableName,primaryId];
             BOOL flag = [db executeUpdate:sql withArgumentsInArray:@[primaryValue]];
-            NSLog(flag?@"删除成功":@"删除失败");
+            XXBDBLogInfoFmort(@"%@",flag?@"删除成功":@"删除失败");
             if (!flag) {
                 res = NO;
                 *rollback = YES;
@@ -375,46 +943,51 @@
     return res;
 }
 
-/** 通过条件删除数据 */
-+ (BOOL)deleteObjectsByCriteria:(NSString *)criteria {
+/*
+ * 通过条件删除数据
+ */
++ (BOOL)p_deleteObjectsByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueSame;
     __block BOOL res = NO;
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
         NSString *tableName = NSStringFromClass(self.class);
         NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ %@ ",tableName,criteria];
         res = [db executeUpdate:sql];
-        NSLog(res?@"删除成功":@"删除失败");
+        XXBDBLogInfoFmort(@"%@",res?@"删除成功":@"删除失败");
     }];
     return res;
 }
 
 /** 通过条件删除 (多参数）--2 */
-+ (BOOL)deleteObjectsWithFormat:(NSString *)format, ...
-{
++ (BOOL)p_deleteObjectsWithFormat:(NSString *)format, ... {
+    XXBDBHelpJudjeQueueSame;
     va_list ap;
     va_start(ap, format);
     NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
     va_end(ap);
     
-    return [self deleteObjectsByCriteria:criteria];
+    return [self p_deleteObjectsByCriteria:criteria];
 }
 
 /** 清空表 */
-+ (BOOL)clearTable
-{
++ (BOOL)p_clearTable {
+    XXBDBHelpJudjeQueueSame;
     __block BOOL res = NO;
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
         NSString *tableName = NSStringFromClass(self.class);
         NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@",tableName];
         res = [db executeUpdate:sql];
-        NSLog(res?@"清空成功":@"清空失败");
+        XXBDBLogInfoFmort(@"%@",res?@"清空成功":@"清空失败");
     }];
     return res;
 }
 
-/** 查询全部数据 */
-+ (NSArray *)findAll {
-    NSLog(@"XXBDB---%s",__func__);
-    NSMutableArray *users = [NSMutableArray array];
+/*
+ * 查询全部数据
+ */
++ (NSArray *)p_findAll {
+    XXBDBHelpJudjeQueueSame;
+    NSMutableArray *modelArray = [NSMutableArray array];
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
         NSString *tableName = NSStringFromClass(self.class);
         NSString *sql = [NSString stringWithFormat:@"SELECT * FROM %@",tableName];
@@ -432,48 +1005,40 @@
                     [model setValue:[NSNumber numberWithLongLong:[resultSet longLongIntForColumn:columeName]] forKey:columeName];
                 }
             }
-            [users addObject:model];
+            [modelArray addObject:model];
             FMDBRelease(model);
         }
     }];
-    
-    return users;
+    return modelArray;
 }
 
-+ (instancetype)findFirstWithFormat:(NSString *)format, ... {
++ (instancetype)p_findByPK:(int)inPk {
+    XXBDBHelpJudjeQueueSame;
+    NSString *condition = [NSString stringWithFormat:@"WHERE %@=%d",primaryId,inPk];
+    return [self p_findFirstByCriteria:condition];
+}
+
++ (NSArray *)p_findWithFormat:(NSString *)format, ... {
     va_list ap;
     va_start(ap, format);
     NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
     va_end(ap);
-    
-    return [self findFirstByCriteria:criteria];
+    return [self p_findByCriteria:criteria];
 }
 
 /** 查找某条数据 */
-+ (instancetype)findFirstByCriteria:(NSString *)criteria {
-    NSArray *results = [self.class findByCriteria:criteria];
++ (instancetype)p_findFirstByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueSame;
+    NSArray *results = [self p_findByCriteria:criteria];
     if (results.count < 1) {
         return nil;
     }
-    
     return [results firstObject];
 }
 
-+ (instancetype)findByPK:(int)inPk {
-    NSString *condition = [NSString stringWithFormat:@"WHERE %@=%d",primaryId,inPk];
-    return [self findFirstByCriteria:condition];
-}
-
-+ (NSArray *)findWithFormat:(NSString *)format, ... {
-    va_list ap;
-    va_start(ap, format);
-    NSString *criteria = [[NSString alloc] initWithFormat:format locale:[NSLocale currentLocale] arguments:ap];
-    va_end(ap);
-    return [self findByCriteria:criteria];
-}
-
 /** 通过条件查找数据 */
-+ (NSArray *)findByCriteria:(NSString *)criteria {
++ (NSArray *)p_findByCriteria:(NSString *)criteria {
+    XXBDBHelpJudjeQueueSame;
     NSMutableArray *users = [NSMutableArray array];
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inDatabase:^(FMDatabase *db) {
         NSString *tableName = NSStringFromClass(self.class);
@@ -496,109 +1061,7 @@
             FMDBRelease(model);
         }
     }];
-    
     return users;
-}
-
-#pragma mark - util method
-+ (NSString *)getColumeAndTypeString {
-    NSMutableString* pars = [NSMutableString string];
-    NSDictionary *dict = [self.class getAllProperties];
-    
-    NSMutableArray *proNames = [dict objectForKey:@"name"];
-    NSMutableArray *proTypes = [dict objectForKey:@"type"];
-    
-    for (int i=0; i< proNames.count; i++) {
-        [pars appendFormat:@"%@ %@",[proNames objectAtIndex:i],[proTypes objectAtIndex:i]];
-        if(i+1 != proNames.count) {
-            [pars appendString:@","];
-        }
-    }
-    return pars;
-}
-
-#pragma mark - must be override method
-/** 如果子类中有一些property不需要创建数据库字段，那么这个方法必须在子类中重写
- */
-+ (NSArray *)transients
-{
-    return [NSArray array];
-}
-
-#pragma mark - function
-
-- (BOOL)saveOrUpdate {
-    id primaryValue = [self valueForKey:primaryId];
-    if ([primaryValue intValue] <= 0) {
-        return [self save];
-    }
-    return [self update];
-}
-
-- (BOOL)saveOrUpdateByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue
-{
-    id record = [self.class findFirstByCriteria:[NSString stringWithFormat:@"where %@ = %@",columnName,columnValue]];
-    if (record) {
-        id primaryValue = [record valueForKey:primaryId]; //取到了主键PK
-        if ([primaryValue intValue] <= 0) {
-            return [self save];
-        }else{
-            self.pk = [primaryValue integerValue];
-            return [self update];
-        }
-    }else{
-        return [self save];
-    }
-}
-
-/** 更新单个对象 */
-- (BOOL)update {
-    __block BOOL res = NO;
-    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
-        NSString *tableName = NSStringFromClass(self.class);
-        id primaryValue = [self valueForKey:primaryId];
-        if (!primaryValue || primaryValue <= 0) {
-            return ;
-        }
-        NSMutableString *keyString = [NSMutableString string];
-        NSMutableArray *updateValues = [NSMutableArray  array];
-        for (int i = 0; i < self.columeNames.count; i++) {
-            NSString *proname = [self.columeNames objectAtIndex:i];
-            if ([proname isEqualToString:primaryId]) {
-                continue;
-            }
-            [keyString appendFormat:@" %@=?,", proname];
-            id value = [self valueForKey:proname];
-            if (!value) {
-                value = @"";
-            }
-            [updateValues addObject:value];
-        }
-        
-        //删除最后那个逗号
-        [keyString deleteCharactersInRange:NSMakeRange(keyString.length - 1, 1)];
-        NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE %@ = ?;", tableName, keyString, primaryId];
-        [updateValues addObject:primaryValue];
-        res = [db executeUpdate:sql withArgumentsInArray:updateValues];
-        NSLog(res?@"更新成功":@"更新失败");
-    }];
-    return res;
-}
-
-/** 删除单个对象 */
-- (BOOL)deleteObject {
-    __block BOOL res = NO;
-    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
-        NSString *tableName = NSStringFromClass(self.class);
-        id primaryValue = [self valueForKey:primaryId];
-        if (!primaryValue || primaryValue <= 0) {
-            return ;
-        }
-        NSString *sql = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = ?",tableName,primaryId];
-        res = [db executeUpdate:sql withArgumentsInArray:@[primaryValue]];
-        NSLog(res?@"删除成功":@"删除失败");
-    }];
-    return res;
 }
 
 

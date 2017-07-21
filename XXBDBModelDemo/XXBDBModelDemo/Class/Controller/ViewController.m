@@ -20,7 +20,8 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     [self initDB];
-    [self testSave];
+//    [self testSave];
+    [self testSaveArray];
 }
 
 - (void)initDB {
@@ -42,8 +43,27 @@
     [userModel saveAsync:^(BOOL complate) {
         NSLog(@"saveAsync");
     }];
-    NSArray *array = [XXBUserModel findAll];
+    NSArray *array = [XXBUserModel findAllSync];
     NSLog(@"XXB %@",array);
+}
+
+- (void)testSaveArray {
+    NSMutableArray *saveArray = [NSMutableArray array];
+    XXBUserModel *userModel = [[XXBUserModel alloc] init];
+    userModel.name = @"Test Name save Array";
+    [saveArray addObject:userModel];
+    
+    [XXBUserModel saveObjectsSync:saveArray];
+    NSLog(@"saveSync");
+    [XXBUserModel saveObjectsAsync:saveArray complate:^(BOOL complate) {
+        NSLog(@"saveAsync");
+    }];
+    NSArray *searchArray = [XXBUserModel findAllSync];
+    NSLog(@"XXB - search Sync %@",searchArray);
+    [XXBUserModel findAllAsync:^(NSArray *answerArray) {
+        NSLog(@"XXB - search Async %@",answerArray);
+    }];
+    NSLog(@"XXB - search end");
 }
 
 - (void)didReceiveMemoryWarning {

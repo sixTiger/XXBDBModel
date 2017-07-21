@@ -23,7 +23,8 @@ NSLog((@"[XXBDBLog][INFO]--%s[Line%d]--" fmt), __PRETTY_FUNCTION__, __LINE__, ##
 typedef enum : int {
     XXBDBLogLevelDebug = 100,
     XXBDBLogLevelInfo = 101,
-    XXBDBLogLevelRelease = 102,
+    XXBDBLogLevelError = 102,
+    XXBDBLogLevelRelease = 103,
     XXBDBLogLevelNone = 0x7fffffff,
 } XXBDBLogLevel;
 
