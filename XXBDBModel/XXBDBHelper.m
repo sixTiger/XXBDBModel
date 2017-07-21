@@ -87,12 +87,12 @@ static id _instance = nil;
     return [self getDatabaseQueueWithClass:[model class]];
 }
 
-- (void)changeDefaultDBWithDirectoryName:(NSString *)name complate:(DBHelperComplate)complate {
+- (void)changeDefaultDBWithDirectoryName:(NSString *)name complate:(XXBDBComplate)complate {
     if (name.length == 0) {
         complate(NO);
         return;
     }
-    dispatch_sync([self getBDBHelperQueue], ^{
+    dispatch_sync(XXBDBHelperQueue, ^{
         if (self.defaultDBPath != nil) {
 #warning 需要移除  FMDBQueue
         }
@@ -122,7 +122,7 @@ static id _instance = nil;
     });
 }
 
-- (void)changeDBWithDBModel:(XXBDBModel *)model complate:(DBHelperComplate)complate {
+- (void)changeDBWithDBModel:(XXBDBModel *)model complate:(XXBDBComplate)complate {
     dispatch_async([self getBDBHelperQueue], ^{
         [self addIfNotHaveDBQueueWithName:[[model class] getDBPathName]];
         [[model class] performSelector:@selector(createTable) withObject:nil];
@@ -174,20 +174,29 @@ static id _instance = nil;
 }
 
 - (void)judjeCurrentQueueSame {
-//#ifndef NDEBUG
+#ifndef NDEBUG
     /* Get the currently executing queue (which should probably be nil, but in theory could be another DB queue
      * and then check it against self to make sure we're not about to deadlock. */
-    XXBDBHelper *currentSyncQueue = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
-    assert(currentSyncQueue == self && "数据存取不在同一个队列里边 肯呢个会引起数据混乱，崩溃");
-//#endif
+    XXBDBHelper *currentHelper = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
+    assert(currentHelper == self && "数据存取不在同一个队列里边 肯呢个会引起数据混乱，崩溃");
+#endif
 }
 
 - (void)judjeCurrentQueueDifferent {
-    //#ifndef NDEBUG
+#ifndef NDEBUG
     /* Get the currently executing queue (which should probably be nil, but in theory could be another DB queue
      * and then check it against self to make sure we're not about to deadlock. */
-    XXBDBHelper *currentSyncQueue = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
-    assert(currentSyncQueue != self && "数据存取在同一个队列里边，可能会造成线程的死锁");
-    //#endif
+    XXBDBHelper *currentHelper = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
+    assert(currentHelper != self && "数据存取在同一个队列里边，可能会造成线程的死锁");
+#endif
+}
+
+- (BOOL)isInXXBDBHelperQueue {
+    XXBDBHelper *currentHelper = (__bridge id)dispatch_get_specific([self getDispatchQueueKey]);
+    if (currentHelper == self) {
+        return YES;
+    } else {
+        return NO;
+    }
 }
 @end

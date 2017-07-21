@@ -11,10 +11,12 @@
 
 @class FMDatabaseQueue;
 
-#define XXBDBHelpJudjeQueueSame [[XXBDBHelper shareDBHelper] judjeCurrentQueueSame];
-#define XXBDBHelpJudjeQueueDifferent [[XXBDBHelper shareDBHelper] judjeCurrentQueueSame];
+#define XXBDBHelpJudjeQueueSame [[XXBDBHelper shareDBHelper] judjeCurrentQueueSame]
+#define XXBDBHelpJudjeQueueDifferent [[XXBDBHelper shareDBHelper] judjeCurrentQueueDifferent]
+#define XXBDBHelperIsInHelperQueue [[XXBDBHelper shareDBHelper] isInXXBDBHelperQueue]
+#define XXBDBHelperIsInMainThread [[NSThread currentThread] isMainThread]
+#define XXBDBHelperQueue [[XXBDBHelper shareDBHelper] getBDBHelperQueue]
 
-typedef void(^DBHelperComplate)(BOOL complate);
 
 @interface XXBDBHelper : NSObject
 + (instancetype)shareDBHelper;
@@ -29,11 +31,13 @@ typedef void(^DBHelperComplate)(BOOL complate);
 - (FMDatabaseQueue *)getDefaultDBQueue;
 - (FMDatabaseQueue *)getDatabaseQueueWithClass:(Class)modelClass;
 - (FMDatabaseQueue *)getDatabaseQueueWithDBModel:(XXBDBModel *)model;
-- (void)changeDefaultDBWithDirectoryName:(NSString *)name complate:(DBHelperComplate)complate;
-- (void)changeDBWithDBModel:(XXBDBModel *)model complate:(DBHelperComplate)complate;
+- (void)changeDefaultDBWithDirectoryName:(NSString *)name complate:(XXBDBComplate)complate;
+- (void)changeDBWithDBModel:(XXBDBModel *)model complate:(XXBDBComplate)complate;
+
 
 - (dispatch_queue_t)getBDBHelperQueue;
 - (const void * const)getDispatchQueueKey;
 - (void)judjeCurrentQueueSame;
 - (void)judjeCurrentQueueDifferent;
+- (BOOL)isInXXBDBHelperQueue;
 @end

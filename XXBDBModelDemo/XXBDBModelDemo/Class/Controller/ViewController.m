@@ -19,22 +19,32 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
+    [self initDB];
+    [self testSave];
+}
+
+- (void)initDB {
     [[XXBDBHelper shareDBHelper] changeDefaultDBWithDirectoryName:@"XXB" complate:^(BOOL complate) {
         if (complate) {
-            NSLog(@"XXB Complate");
+            NSLog(@"XXB - DBINIT Complate");
         } else {
-            NSLog(@"XXB Not Complate");
+            NSLog(@"XXB - DBINIT Not Complate");
         }
     }];
-    NSLog(@"XXB Test");
     
+}
+
+- (void)testSave {
     XXBUserModel *userModel = [[XXBUserModel alloc] init];
     userModel.name = @"Test Name 1";
-    [userModel saveOrUpdate];
+    [userModel saveSync];
+    NSLog(@"saveSync");
+    [userModel saveAsync:^(BOOL complate) {
+        NSLog(@"saveAsync");
+    }];
     NSArray *array = [XXBUserModel findAll];
     NSLog(@"XXB %@",array);
 }
-
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];

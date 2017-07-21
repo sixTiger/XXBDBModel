@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+typedef void(^XXBDBComplate)(BOOL complate);
+
 /** SQLite五种数据类型 */
 #define SQLTEXT     @"TEXT"
 #define SQLINTEGER  @"INTEGER"
@@ -58,11 +60,26 @@
 /** 表中的字段*/
 + (NSArray *)getColumns;
 
+/*
+ * 保存单个数据
+ */
+- (BOOL)saveSync;
+- (void)saveAsync:(XXBDBComplate)complate;
+
+/*
+ * 批量保存数据
+ */
++ (BOOL)saveObjects:(NSArray *)array;
+
+
 /** 保存或更新
  * 如果不存在主键，保存，
  * 有主键，则更新
  */
 - (BOOL)saveOrUpdate;
+
+- (BOOL)saveOrUpdateSync;
+- (BOOL)saveOrUpdateAsync:(XXBDBComplate)complate;
 
 /** 保存或更新
  * 如果根据特定的列数据可以获取记录，则更新，
@@ -70,18 +87,10 @@
  */
 - (BOOL)saveOrUpdateByColumnName:(NSString*)columnName AndColumnValue:(NSString*)columnValue;
 
-/*
- * 保存单个数据 
- */
-- (BOOL)save;
+
 
 /*
- * 批量保存数据 
- */
-+ (BOOL)saveObjects:(NSArray *)array;
-
-/*
- * 更新单个数据 
+ * 更新单个数据
  */
 - (BOOL)update;
 

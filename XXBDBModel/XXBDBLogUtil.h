@@ -14,7 +14,7 @@
 
 #define XXBDBLog(level,fmt, ...) ( \
 (XXBDBDEFINE_LOG_LEVEL>level) ? : \
-NSLog((@"[MotionSticker][INFO]--%s[Line%d]--" fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__) \
+NSLog((@"[XXBDBLog][INFO]--%s[Line%d]--" fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__) \
 )
 
 #define XXBDBLogInfo XXBDBLog(XXBDBLogLevelInfo,"")

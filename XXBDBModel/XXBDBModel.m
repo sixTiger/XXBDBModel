@@ -9,6 +9,7 @@
 #import "XXBDBModel.h"
 #import <objc/runtime.h>
 #import "XXBDBHelper.h"
+#import "XXBDBLogUtil.h"
 #import <FMDB.h>
 
 
@@ -129,7 +130,7 @@
  * 如果已经创建，返回YES
  */
 + (BOOL)createTable {
-    XXBDBHelpJudjeQueueSame
+    XXBDBHelpJudjeQueueSame;
     __block BOOL res = YES;
     [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithClass:self] inTransaction:^(FMDatabase *db, BOOL *rollback) {
         NSString *tableName = NSStringFromClass(self.class);
@@ -165,6 +166,67 @@
         }
     }];
     
+    return res;
+}
+
+#pragma mark - save
+
+- (BOOL)saveSync {
+    XXBDBHelpJudjeQueueDifferent;
+    __block BOOL res = NO;
+    dispatch_sync(XXBDBHelperQueue, ^{
+        XXBDBLogInfo;
+        res = [self save];
+    });
+    return res;
+}
+
+- (void)saveAsync:(XXBDBComplate)complate {
+    if (XXBDBHelperIsInMainThread) {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            XXBDBLogInfo;
+            BOOL res = [self save];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                complate(res);
+            });
+        });
+    } else {
+        dispatch_async([[XXBDBHelper shareDBHelper] getBDBHelperQueue], ^{
+            complate([self save]);
+        });
+    }
+}
+
+- (BOOL)save {
+    XXBDBHelpJudjeQueueSame;
+    NSString *tableName = NSStringFromClass(self.class);
+    NSMutableString *keyString = [NSMutableString string];
+    NSMutableString *valueString = [NSMutableString string];
+    NSMutableArray *insertValues = [NSMutableArray  array];
+    for (int i = 0; i < self.columeNames.count; i++) {
+        NSString *proname = [self.columeNames objectAtIndex:i];
+        if ([proname isEqualToString:primaryId]) {
+            continue;
+        }
+        [keyString appendFormat:@"%@,", proname];
+        [valueString appendString:@"?,"];
+        id value = [self valueForKey:proname];
+        if (!value) {
+            value = @"";
+        }
+        [insertValues addObject:value];
+    }
+    
+    [keyString deleteCharactersInRange:NSMakeRange(keyString.length - 1, 1)];
+    [valueString deleteCharactersInRange:NSMakeRange(valueString.length - 1, 1)];
+    
+    __block BOOL res = NO;
+    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
+        NSString *sql = [NSString stringWithFormat:@"INSERT INTO %@(%@) VALUES (%@);", tableName, keyString, valueString];
+        res = [db executeUpdate:sql withArgumentsInArray:insertValues];
+        self.pk = res?[NSNumber numberWithLongLong:db.lastInsertRowId].intValue:0;
+        XXBDBLogInfoFmort( @"%@",res ? @"插入成功":@"插入失败");
+    }];
     return res;
 }
 
@@ -214,6 +276,8 @@
     }];
     return res;
 }
+
+#pragma mark - update
 
 /** 批量更新用户对象*/
 + (BOOL)updateObjects:(NSArray *)array {
@@ -455,7 +519,6 @@
     if ([primaryValue intValue] <= 0) {
         return [self save];
     }
-    
     return [self update];
 }
 
@@ -473,39 +536,6 @@
     }else{
         return [self save];
     }
-}
-
-- (BOOL)save
-{
-    NSString *tableName = NSStringFromClass(self.class);
-    NSMutableString *keyString = [NSMutableString string];
-    NSMutableString *valueString = [NSMutableString string];
-    NSMutableArray *insertValues = [NSMutableArray  array];
-    for (int i = 0; i < self.columeNames.count; i++) {
-        NSString *proname = [self.columeNames objectAtIndex:i];
-        if ([proname isEqualToString:primaryId]) {
-            continue;
-        }
-        [keyString appendFormat:@"%@,", proname];
-        [valueString appendString:@"?,"];
-        id value = [self valueForKey:proname];
-        if (!value) {
-            value = @"";
-        }
-        [insertValues addObject:value];
-    }
-    
-    [keyString deleteCharactersInRange:NSMakeRange(keyString.length - 1, 1)];
-    [valueString deleteCharactersInRange:NSMakeRange(valueString.length - 1, 1)];
-    
-    __block BOOL res = NO;
-    [[[XXBDBHelper shareDBHelper] getDatabaseQueueWithDBModel:self] inDatabase:^(FMDatabase *db) {
-        NSString *sql = [NSString stringWithFormat:@"INSERT INTO %@(%@) VALUES (%@);", tableName, keyString, valueString];
-        res = [db executeUpdate:sql withArgumentsInArray:insertValues];
-        self.pk = res?[NSNumber numberWithLongLong:db.lastInsertRowId].intValue:0;
-        NSLog(res?@"插入成功":@"插入失败");
-    }];
-    return res;
 }
 
 /** 更新单个对象 */
